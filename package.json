@@ -1,0 +1,47 @@
+{
+  "name": "turn-pulse",
+  "version": "1.0.0",
+  "description": "Real-time OpenCode turn state machine inspector: TTFT wait, thinking, tool argument streaming, tool execution, and token velocity in Work Status",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "bunx openchamber-guest-bundle --node service/main.ts service/main.js",
+    "check": "bunx openchamber-guest-check",
+    "test": "bun test"
+  },
+  "openchamber": {
+    "apiVersion": 1,
+    "engines": {
+      "openchamber": ">=2.7.0"
+    },
+    "id": "turn-pulse",
+    "name": "Turn Pulse",
+    "icon": "pulse",
+    "contributes": {
+      "service": {
+        "entry": "service/main.js",
+        "runtime": "host",
+        "provides": [
+          "opencode"
+        ]
+      },
+      "statusSection": {
+        "source": {
+          "path": "/status",
+          "interval": 1000
+        },
+        "title": "Turn Pulse"
+      }
+    }
+  },
+  "dependencies": {
+    "@openchamber/sdk": "2.7.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}
