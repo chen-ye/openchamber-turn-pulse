@@ -1,34 +1,40 @@
-# Turn Pulse
+# Turn Pulse extension for OpenChamber
 
-OpenChamber host service extension powered by `@openchamber/sdk` (`2.7.0`, targeting OpenChamber `>=2.7.0`). Inspects OpenCode turn execution in real time and renders phase state, token velocity, and proportional phase timing in OpenChamber's Work Status panel.
+Shows real-time OpenCode turn execution phases, streaming token velocity, and proportional phase timing in OpenChamber's Work Status panel.
 
-## How it works
+## Setup
 
-- **Host Service (`service/main.js`)**: Runs as an authenticated loopback HTTP service (`127.0.0.1:$OPENCHAMBER_SERVICE_PORT`, Bearer auth via `OPENCHAMBER_SERVICE_TOKEN`).
-- **OpenCode Event Stream & Hydration**: Subscribes to `$OPENCHAMBER_OPENCODE_URL/api/event` (SSE) and hydrates session metadata from `/api/session`, `/api/session/active`, `/api/session/:id`, and `/api/session/:id/message`.
-- **Work Status Endpoint (`/status`)**: Polled by OpenChamber every `1000ms` (`GET /status?directory=...`) and accepts control actions (`POST /status`) for switching or pinning the inspected workspace session (`Auto` or a specific session). Also serves `GET /health`.
+1. Ensure you are running OpenChamber `>=2.7.0`. No extra CLIs or configuration are required.
+2. In OpenChamber **Settings → Extensions**, add or enable the `turn-pulse` extension directory.
 
-## Tracked phases & status view
+## Using Turn Pulse in OpenChamber
 
-- **Turn Phases**: Tracks `waiting-first-token`, `reasoning`, `tool-input`, `tool-running`, `waiting-permission`, `waiting-question`, `streaming-text`, `compacting`, `retrying`, `finalizing`, `subagent-wait`, `cooldown` (2s), `idle`, and `failed`.
-- **Headline & Timers**: Displays the current phase (including step count, active tool, or block reason) alongside phase and total turn durations.
-- **Throughput Sparkline**: Plots a 30-second rolling stream-rate chart with aligned `tok/s` estimates (derived from streamed characters).
-- **Phase Breakdown Bars**: Shows proportional horizontal bars and tabular-aligned durations for `First token` / `LLM wait`, `Thinking`, `Tool args`, `Tools`, `Reply`, and `Blocked`.
-- **Concurrency & Subagents**: Lists parallel in-flight tools (when more than one tool runs concurrently) and active child subagent sessions.
+### Work Status panel
 
-## Layout
+The **Turn Pulse** section updates every second while you work in OpenChamber:
 
-- `index.ts` — Re-exports `service/main.ts`.
-- `service/main.ts` — Turn state machine, SSE client, status view builder, and HTTP server.
-- `service/main.js` — Bundled Node host entrypoint loaded by OpenChamber (kept tracked for direct extension loading).
-- `service/main.test.ts` — Unit tests covering multi-step turn transitions, subagent wait, session switcher selection, and tabular layout alignment.
+- **Headline and timers**: Displays the current turn phase—including step number, active tool name and target, or what the turn is waiting on—alongside `phase · total` elapsed durations while active, or the total turn duration once finished (`Turn complete` briefly, then `Idle`, or `Failed` with the error message). Hover the row for session title, agent, model, step count, initial time-to-first-token, and estimated output tokens.
+- **Throughput sparkline**: Plots a 30-second rolling stream-rate chart with estimated `tok/s` (live rate while streaming, or peak `tok/s` after the turn finishes).
+- **Phase breakdown bars**: Shows proportional horizontal bars and aligned durations for each stage that ran during the turn:
+  - **First token** (or **LLM wait (N)** on multi-step turns): Time waiting for the model to emit its first token.
+  - **Thinking**: Time spent streaming reasoning output.
+  - **Tool args**: Time spent streaming tool call arguments.
+  - **Tools (N)**: Time spent executing tools (and total tool count).
+  - **Reply**: Time spent streaming the assistant's text reply.
+  - **Blocked**: Time spent waiting on permission approvals, user questions, retry backoffs, or child subagents.
+- **Parallel tools and subagents**: Lists up to 3 concurrent in-flight tools (when more than one runs at once) and up to 3 active child subagent sessions with their live phase and duration.
+
+### Switching sessions (`Auto` vs. pinned)
+
+When two or more root sessions in the active workspace have live or recent turn activity, a **Session** selector appears in the **Turn Pulse** header:
+
+- **Auto** (default): Automatically follows the currently active session in the workspace, or the most recently updated session when idle.
+- **Pinned session**: Select any listed session (`●` marks busy sessions) to lock the Work Status view to that chat until you switch back to **Auto**.
 
 ## Development
 
 ```bash
-bun install
-bun run build        # Bundles service/main.ts -> service/main.js
-bun run check        # Validates extension manifest and entry points
-bun check --no-script
-bun test             # Runs unit tests in service/main.test.ts
+bun run build
+bun run check
+bun test
 ```
